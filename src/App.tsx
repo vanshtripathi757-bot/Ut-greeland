@@ -20,6 +20,7 @@ import { createAcademyTextureLibrary } from './game/textures';
 import { buildAnimeStudentCharacter, updateCharacterAnimation } from './game/characterModel';
 import { buildAoyamaCourtyard, CourtyardEnvironment } from './game/courtyardScene';
 import { soundEngine } from './game/sound';
+import { STORY_MISSIONS, applyMissionEvent, createMissionProgress } from './game/missions';
 import { TitleScreen } from './components/TitleScreen';
 import { CourtyardHud } from './components/CourtyardHud';
 import { StatusAndUnityModal } from './components/StatusAndUnityModal';
@@ -48,6 +49,7 @@ export default function App() {
   const [hudZone, setHudZone] = useState('Sakura Stone Promenade');
   const [hudGait, setHudGait] = useState<GaitState>('idle');
   const [hudCoords, setHudCoords] = useState<{ x: number; z: number }>({ x: 0, z: 22 });
+  const [missionProgress, setMissionProgress] = useState(() => createMissionProgress(STORY_MISSIONS[0]));
   const lastHudValuesRef = useRef<{ zone: string; gait: GaitState; rx: number; rz: number }>({
     zone: 'Sakura Stone Promenade',
     gait: 'idle',
@@ -468,6 +470,11 @@ export default function App() {
           if (nextZone !== prev.zone) {
             prev.zone = nextZone;
             setHudZone(nextZone);
+            const missionEvent = nextZone === 'Central Stone Lantern Plaza' ? 'enter_zone' : 'reach';
+            setMissionProgress((current) => applyMissionEvent(STORY_MISSIONS[0], current, {
+              type: missionEvent,
+              target: nextZone,
+            }));
           }
           if (c.gait !== prev.gait) {
             prev.gait = c.gait;
@@ -653,6 +660,8 @@ export default function App() {
       {shellState === 'playing' && (
         <CourtyardHud
           zoneName={hudZone}
+          mission={STORY_MISSIONS[0]}
+          missionProgress={missionProgress}
           gait={hudGait}
           coords={hudCoords}
           cameraMode={cameraMode}
