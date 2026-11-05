@@ -401,6 +401,7 @@ export default function App() {
           soundEngine.playJump();
         }
 
+        const wasGrounded = charStateRef.current.grounded;
         charStateRef.current = stepCharacterKinematics(
           charStateRef.current,
           {
@@ -416,6 +417,8 @@ export default function App() {
             ? COURTYARD_COLLIDERS.filter((collider) => collider.label !== 'Academy Entrance Door')
             : COURTYARD_COLLIDERS
         );
+
+        if (!wasGrounded && charStateRef.current.grounded) soundEngine.playLand();
 
         camStateRef.current = stepCameraRig(
           camStateRef.current,
@@ -702,12 +705,14 @@ export default function App() {
             soundEngine.playDoor();
           }}
           onTouchMoveInput={(dx, dz) => {
+            soundEngine.startBackgroundMusic();
             touchMoveRef.current = { x: dx, z: dz };
           }}
           onTouchSprintChange={(active) => {
             touchSprintRef.current = active;
           }}
           onTouchJump={() => {
+            soundEngine.startBackgroundMusic();
             jumpJustPressedRef.current = true;
           }}
         />
