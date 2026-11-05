@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import {
   createInitialCharacterState,
+  COURTYARD_COLLIDERS,
   createInitialCameraState,
   stepCharacterKinematics,
   stepCameraRig,
@@ -52,6 +53,7 @@ export default function App() {
   const [missionProgress, setMissionProgress] = useState(() => createMissionProgress(STORY_MISSIONS[0]));
   const [nearEntranceDoor, setNearEntranceDoor] = useState(false);
   const [entranceDoorOpen, setEntranceDoorOpen] = useState(false);
+  const entranceDoorOpenRef = useRef(false);
   const lastHudValuesRef = useRef<{ zone: string; gait: GaitState; rx: number; rz: number }>({
     zone: 'Sakura Stone Promenade',
     gait: 'idle',
@@ -409,7 +411,10 @@ export default function App() {
             jumpHeld,
             cameraYaw: camStateRef.current.yaw,
           },
-          rawDt
+          rawDt,
+          entranceDoorOpenRef.current
+            ? COURTYARD_COLLIDERS.filter((collider) => collider.label !== 'Academy Entrance Door')
+            : COURTYARD_COLLIDERS
         );
 
         camStateRef.current = stepCameraRig(
@@ -564,7 +569,8 @@ export default function App() {
 
       if (e.code === 'KeyE' && nearEntranceDoor && !statusModalOpenRef.current) {
         courtyardEnvRef.current?.openEntranceDoor();
-        setEntranceDoorOpen((open) => !open);
+        entranceDoorOpenRef.current = !entranceDoorOpenRef.current;
+        setEntranceDoorOpen(entranceDoorOpenRef.current);
         soundEngine.playDoor();
         return;
       }
@@ -691,7 +697,8 @@ export default function App() {
           entranceDoorOpen={entranceDoorOpen}
           onInteractDoor={() => {
             courtyardEnvRef.current?.openEntranceDoor();
-            setEntranceDoorOpen((open) => !open);
+            entranceDoorOpenRef.current = !entranceDoorOpenRef.current;
+            setEntranceDoorOpen(entranceDoorOpenRef.current);
             soundEngine.playDoor();
           }}
           onTouchMoveInput={(dx, dz) => {
