@@ -139,7 +139,8 @@ export const COURTYARD_COLLIDERS: ColliderBox[] = [
   // Main Academy Building (North Wing)
   { minX: -26, maxX: -4.5, minZ: -34, maxZ: -20, maxY: 16, label: 'Academy Main Building West' },
   { minX: 4.5, maxX: 26, minZ: -34, maxZ: -20, maxY: 16, label: 'Academy Main Building East' },
-  { minX: -5, maxX: 5, minZ: -34, maxZ: -21.0, maxY: 22, label: 'Academy Central Hall & Clock Tower' },
+  { minX: -5, maxX: -1.62, minZ: -34, maxZ: -21.0, maxY: 22, label: 'Academy Central Hall West' },
+  { minX: 1.62, maxX: 5, minZ: -34, maxZ: -21.0, maxY: 22, label: 'Academy Central Hall East' },
   // Main entrance door blocks passage until the player opens it
   { minX: -1.48, maxX: 1.48, minZ: -20.15, maxZ: -19.75, maxY: 3.8, label: 'Academy Entrance Door' },
 
@@ -232,19 +233,16 @@ export function getCurrentZoneName(x: number, z: number): string {
  */
 export function getGroundHeightAt(x: number, z: number): number {
   if (Math.abs(x) > 4.0) return 0;
-
-  let height = 0;
-  for (let step = 0; step < 5; step++) {
-    const centerZ = -15.2 - step * 0.35;
-    const depth = 2.4 - step * 0.45;
-    if (z >= centerZ - depth / 2 && z <= centerZ + depth / 2) {
-      height = Math.max(height, (step + 1) * 0.16);
-    }
-  }
-
-  // Flat upper landing from the final stair to the main entrance.
-  if (z < -16.9 && z >= -21.0) height = Math.max(height, 0.8);
-  return height;
+  // Five shallow risers from the courtyard toward the upper entrance landing.
+  if (z > -14.05) return 0;
+  if (z > -14.62) return 0.16;
+  if (z > -15.19) return 0.32;
+  if (z > -15.76) return 0.48;
+  if (z > -16.33) return 0.64;
+  if (z >= -17.15) return 0.8;
+  // The entrance landing continues to the door threshold.
+  if (z >= -20.7) return 0.8;
+  return 0;
 }
 
 export function normalizeAngle(angle: number): number {
