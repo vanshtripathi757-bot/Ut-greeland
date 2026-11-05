@@ -50,6 +50,8 @@ export default function App() {
   const [hudGait, setHudGait] = useState<GaitState>('idle');
   const [hudCoords, setHudCoords] = useState<{ x: number; z: number }>({ x: 0, z: 22 });
   const [missionProgress, setMissionProgress] = useState(() => createMissionProgress(STORY_MISSIONS[0]));
+  const [nearEntranceDoor, setNearEntranceDoor] = useState(false);
+  const [entranceDoorOpen, setEntranceDoorOpen] = useState(false);
   const lastHudValuesRef = useRef<{ zone: string; gait: GaitState; rx: number; rz: number }>({
     zone: 'Sakura Stone Promenade',
     gait: 'idle',
@@ -95,6 +97,7 @@ export default function App() {
     document.body.dataset.state = 'playing';
     shellStateRef.current = 'playing';
     setShellState('playing');
+    soundEngine.startBackgroundMusic();
     soundEngine.playUiSwitch();
   }, []);
 
@@ -286,6 +289,7 @@ export default function App() {
     let lastPointerY = 0;
 
     const onPointerDown = (e: PointerEvent) => {
+      soundEngine.startBackgroundMusic();
       if (lookPointerId !== null) return;
       lookPointerId = e.pointerId;
       lastPointerX = e.clientX;
@@ -464,6 +468,7 @@ export default function App() {
           lastHudSync = now;
           const c = charStateRef.current;
           const nextZone = getCurrentZoneName(c.x, c.z);
+          setNearEntranceDoor(Math.abs(c.x) < 2.1 && Math.abs(c.z + 18.2) < 2.4);
           const rx = Math.round(c.x);
           const rz = Math.round(c.z);
           const prev = lastHudValuesRef.current;
@@ -554,6 +559,13 @@ export default function App() {
 
       if (e.code === 'KeyM') {
         handleToggleMute();
+        return;
+      }
+
+      if (e.code === 'KeyE' && nearEntranceDoor && !statusModalOpenRef.current) {
+        courtyardEnvRef.current?.openEntranceDoor();
+        setEntranceDoorOpen((open) => !open);
+        soundEngine.playDoor();
         return;
       }
 
@@ -675,6 +687,13 @@ export default function App() {
           onToggleMute={handleToggleMute}
           onTogglePause={() => setShellState('paused')}
           onOpenStatusReport={() => setStatusModalOpen(true)}
+          canInteractDoor={nearEntranceDoor}
+          entranceDoorOpen={entranceDoorOpen}
+          onInteractDoor={() => {
+            courtyardEnvRef.current?.openEntranceDoor();
+            setEntranceDoorOpen((open) => !open);
+            soundEngine.playDoor();
+          }}
           onTouchMoveInput={(dx, dz) => {
             touchMoveRef.current = { x: dx, z: dz };
           }}
