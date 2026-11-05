@@ -9,7 +9,7 @@
     "preview": "vite preview --host=0.0.0.0",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx --test src/game/rules.test.ts"
+    "test": "tsx --test src/game/rules.test.ts src/game/missions.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
