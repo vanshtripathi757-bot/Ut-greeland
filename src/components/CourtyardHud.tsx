@@ -1,8 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { CameraPerspective, LightingPresetId, LIGHTING_PRESETS, GaitState } from '../game/rules';
+import { MissionProgress, StoryMission, getMissionCompletionPercent } from '../game/missions';
 
 interface CourtyardHudProps {
   zoneName: string;
+  mission: StoryMission;
+  missionProgress: MissionProgress;
   gait: GaitState;
   coords: { x: number; z: number };
   cameraMode: CameraPerspective;
@@ -23,6 +26,8 @@ interface CourtyardHudProps {
 
 export const CourtyardHud: React.FC<CourtyardHudProps> = ({
   zoneName,
+  mission,
+  missionProgress,
   gait,
   coords,
   cameraMode,
@@ -205,6 +210,23 @@ export const CourtyardHud: React.FC<CourtyardHudProps> = ({
             </svg>
           </button>
         </div>
+      </div>
+
+      {/* Current story objective */}
+      <div className="absolute left-3 top-[108px] sm:left-5 sm:top-[100px] w-[min(300px,calc(100vw-24px))] rounded-lg border border-pink-300/30 px-3 py-2.5 text-white pointer-events-none" style={{ backgroundColor: 'rgba(14, 19, 31, 0.88)' }}>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-bold tracking-widest text-pink-200">{mission.chapter.toUpperCase()}</span>
+          <span className="text-[10px] text-slate-300">{getMissionCompletionPercent(missionProgress)}%</span>
+        </div>
+        <div className="text-sm font-semibold mt-1">{mission.title}</div>
+        <div className="h-1.5 rounded-full bg-slate-700 mt-2 overflow-hidden"><div className="h-full bg-pink-400" style={{ width: getMissionCompletionPercent(missionProgress) + '%' }} /></div>
+        <div className="mt-2 space-y-1">
+          {mission.objectives.map((objective) => {
+            const progress = missionProgress.objectives.find((item) => item.objectiveId === objective.id);
+            return <div key={objective.id} className={progress?.completed ? 'text-[10px] text-emerald-300' : 'text-[10px] text-slate-300'}>{progress?.completed ? '✓' : '○'} {objective.description}</div>;
+          })}
+        </div>
+        {missionProgress.completed && <div className="text-[10px] font-bold text-emerald-300 mt-2">CHAPTER COMPLETE</div>}
       </div>
 
       {/* First-Person Subtle Center Reticle */}
