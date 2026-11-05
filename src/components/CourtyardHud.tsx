@@ -19,6 +19,9 @@ interface CourtyardHudProps {
   onToggleMute: () => void;
   onTogglePause: () => void;
   onOpenStatusReport: () => void;
+  canInteractDoor: boolean;
+  entranceDoorOpen: boolean;
+  onInteractDoor: () => void;
   onTouchMoveInput: (dx: number, dz: number) => void;
   onTouchSprintChange: (active: boolean) => void;
   onTouchJump: () => void;
@@ -41,6 +44,9 @@ export const CourtyardHud: React.FC<CourtyardHudProps> = ({
   onToggleMute,
   onTogglePause,
   onOpenStatusReport,
+  canInteractDoor,
+  entranceDoorOpen,
+  onInteractDoor,
   onTouchMoveInput,
   onTouchSprintChange,
   onTouchJump,
@@ -228,6 +234,14 @@ export const CourtyardHud: React.FC<CourtyardHudProps> = ({
         </div>
         {missionProgress.completed && <div className="text-[10px] font-bold text-emerald-300 mt-2">CHAPTER COMPLETE</div>}
       </div>
+
+      {canInteractDoor && (
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-16 pointer-events-auto">
+          <button type="button" onClick={onInteractDoor} className="px-5 py-3 rounded-xl bg-[#f472b6] text-slate-950 font-bold text-sm shadow-xl border border-white/50">
+            {entranceDoorOpen ? 'Close Academy Door' : 'Open Academy Door'} · E
+          </button>
+        </div>
+      )}
 
       {/* First-Person Subtle Center Reticle */}
       {cameraMode === 'first_person' && (
