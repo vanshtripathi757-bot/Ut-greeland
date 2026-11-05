@@ -139,7 +139,10 @@ export const COURTYARD_COLLIDERS: ColliderBox[] = [
   // Main Academy Building (North Wing)
   { minX: -26, maxX: -4.5, minZ: -34, maxZ: -20, maxY: 16, label: 'Academy Main Building West' },
   { minX: 4.5, maxX: 26, minZ: -34, maxZ: -20, maxY: 16, label: 'Academy Main Building East' },
-  { minX: -5, maxX: 5, minZ: -34, maxZ: -23.5, maxY: 22, label: 'Academy Central Hall & Clock Tower' },
+  { minX: -5, maxX: -1.62, minZ: -34, maxZ: -21.0, maxY: 22, label: 'Academy Central Hall West' },
+  { minX: 1.62, maxX: 5, minZ: -34, maxZ: -21.0, maxY: 22, label: 'Academy Central Hall East' },
+  // Main entrance door blocks passage until the player opens it
+  { minX: -1.48, maxX: 1.48, minZ: -20.15, maxZ: -19.75, maxY: 3.8, label: 'Academy Entrance Door' },
 
   // Covered Colonnade Pillars / Side Pavilions
   { minX: -34, maxX: -29, minZ: -18, maxZ: 14, maxY: 5, label: 'West Covered Walkway' },
@@ -222,6 +225,24 @@ export function getCurrentZoneName(x: number, z: number): string {
   if (x < -14) return 'West Sakura Lawn & Colonnade';
   if (x > 14) return 'East Courtyard Garden & Walkway';
   return 'Sakura Stone Promenade';
+}
+
+/**
+ * Walkable height profile for the five physical entrance steps and upper landing.
+ * World coordinates match the staircase meshes in courtyardScene.ts.
+ */
+export function getGroundHeightAt(x: number, z: number): number {
+  if (Math.abs(x) > 4.0) return 0;
+  // Five shallow risers from the courtyard toward the upper entrance landing.
+  if (z > -14.05) return 0;
+  if (z > -14.62) return 0.16;
+  if (z > -15.19) return 0.32;
+  if (z > -15.76) return 0.48;
+  if (z > -16.33) return 0.64;
+  if (z >= -17.15) return 0.8;
+  // The entrance landing continues to the door threshold.
+  if (z >= -20.7) return 0.8;
+  return 0;
 }
 
 export function normalizeAngle(angle: number): number {
@@ -370,17 +391,11 @@ export function stepCharacterKinematics(
     next.vy *= Math.pow(0.45, dt * 10);
   }
 
-  // Gravity & vertical integration
+  // Gravity & vertical integration. Ground contact is resolved after horizontal movement
+  // so the character can step onto the next stair instead of being pinned to y=0.
   if (!next.grounded || next.vy > 0) {
     next.vy -= 18.5 * dt;
     next.y += next.vy * dt;
-    if (next.y <= 0) {
-      next.y = 0;
-      next.vy = 0;
-      next.grounded = true;
-      next.squashX = 1.18;
-      next.squashY = 0.82;
-    }
   }
 
   // Squash & stretch recovery
@@ -394,6 +409,24 @@ export function stepCharacterKinematics(
   const resolved = resolveCircleAABBCollisions(rawX, rawZ, 0.42, colliders);
   next.x = resolved.x;
   next.z = resolved.z;
+
+  const groundY = getGroundHeightAt(next.x, next.z);
+  if (next.grounded && groundY > next.y && groundY - next.y <= 0.2) {
+    // Snap up one stair riser while grounded.
+    next.y = groundY;
+    next.vy = 0;
+  } else if (next.y <= groundY && next.vy <= 0) {
+    const landedFromAir = !next.grounded;
+    next.y = groundY;
+    next.vy = 0;
+    next.grounded = true;
+    if (landedFromAir) {
+      next.squashX = 1.18;
+      next.squashY = 0.82;
+    }
+  } else if (next.y > groundY + 0.02) {
+    next.grounded = false;
+  }
 
   // Advance gait cycle proportional to distance traveled
   if (!next.grounded) {

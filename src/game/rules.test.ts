@@ -7,6 +7,7 @@ import {
   stepCameraRig,
   resolveCircleAABBCollisions,
   getCurrentZoneName,
+  getGroundHeightAt,
   COURTYARD_COLLIDERS,
 } from './rules';
 
@@ -122,4 +123,39 @@ test('camera rig smoothly switches between third-person and first-person perspec
   assert.ok(Math.abs(cam.currentX - charState.x) < 0.25);
   assert.ok(Math.abs(cam.currentY - 1.54) < 0.1);
   assert.ok(cam.lookAtZ < cam.currentZ, 'first-person camera looks forward along -Z');
+});
+
+test('academy entrance stair profile rises in five walkable steps', () => {
+  assert.equal(getGroundHeightAt(0, -13.5), 0);
+  assert.equal(getGroundHeightAt(0, -14.3), 0.16);
+  assert.equal(getGroundHeightAt(0, -14.9), 0.32);
+  assert.equal(getGroundHeightAt(0, -15.5), 0.48);
+  assert.equal(getGroundHeightAt(0, -16.0), 0.64);
+  assert.equal(getGroundHeightAt(0, -16.6), 0.8);
+  assert.equal(getGroundHeightAt(5, -16.6), 0);
+});
+
+test('player can walk up the academy entrance steps without jumping', () => {
+  let state = createInitialCharacterState();
+  state.x = 0;
+  state.z = -13.5;
+  for (let i = 0; i < 45; i++) {
+    state = stepCharacterKinematics(state, {
+      moveX: 0,
+      moveZ: -1,
+      sprintHeld: false,
+      jumpJustPressed: false,
+      jumpHeld: false,
+      cameraYaw: 0,
+    }, 0.03);
+  }
+  assert.ok(state.z < -16.0, `player reached the upper steps: z=${state.z}`);
+  assert.equal(state.y, getGroundHeightAt(state.x, state.z));
+  assert.ok(state.y >= 0.64, `player climbed the stair profile: y=${state.y}`);
+});
+
+test('entrance door has a dedicated collision that can be removed after opening', () => {
+  const door = COURTYARD_COLLIDERS.find((collider) => collider.label === 'Academy Entrance Door');
+  assert.ok(door);
+  assert.ok(door.minZ < door.maxZ);
 });

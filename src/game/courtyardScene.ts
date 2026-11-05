@@ -12,6 +12,7 @@ export interface CourtyardEnvironment {
   clockMinuteHand: THREE.Mesh;
   clockHourHand: THREE.Mesh;
   updateAtmosphere: (dt: number, elapsed: number) => void;
+  openEntranceDoor: () => void;
   applyLightingPreset: (presetId: LightingPresetId, scene: THREE.Scene, renderer: THREE.WebGLRenderer) => void;
 }
 
@@ -454,14 +455,35 @@ export function buildAoyamaCourtyard(
     buildingGroup.add(step);
   }
 
-  // Grand Double Entrance Doors
+  // Grand double entrance with two independently hinged animated leaves.
   const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3.6, 0.3), darkIronMat);
   doorFrame.position.set(0, 2.6, 6.95);
   buildingGroup.add(doorFrame);
 
-  const doorGlass = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 3.2), windowGlassMat);
-  doorGlass.position.set(0, 2.6, 7.12);
-  buildingGroup.add(doorGlass);
+  const doorLeft = new THREE.Group();
+  doorLeft.position.set(-1.45, 2.6, 7.10);
+  buildingGroup.add(doorLeft);
+  const leftLeaf = new THREE.Mesh(new THREE.BoxGeometry(1.45, 3.2, 0.12), woodMat);
+  leftLeaf.position.x = 0.725;
+  doorLeft.add(leftLeaf);
+  const leftGlass = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 2.7), windowGlassMat);
+  leftGlass.position.set(0.725, 0, 0.071);
+  doorLeft.add(leftGlass);
+
+  const doorRight = new THREE.Group();
+  doorRight.position.set(1.45, 2.6, 7.10);
+  buildingGroup.add(doorRight);
+  const rightLeaf = new THREE.Mesh(new THREE.BoxGeometry(1.45, 3.2, 0.12), woodMat);
+  rightLeaf.position.x = -0.725;
+  doorRight.add(rightLeaf);
+  const rightGlass = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 2.7), windowGlassMat);
+  rightGlass.position.set(-0.725, 0, 0.071);
+  doorRight.add(rightGlass);
+
+  let doorTargetOpen = false;
+  function openEntranceDoor() {
+    doorTargetOpen = !doorTargetOpen;
+  }
 
   // ── 5. EAST & WEST COVERED WALKWAYS (WATARI-ROUKA) ───────────────────────
   [-31.5, 31.5].forEach((sideX) => {
@@ -834,6 +856,9 @@ export function buildAoyamaCourtyard(
   if (petalMesh.instanceColor) petalMesh.instanceColor.needsUpdate = true;
 
   function updateAtmosphere(dt: number, elapsed: number) {
+    const doorTarget = doorTargetOpen ? Math.PI * 0.48 : 0;
+    doorLeft.rotation.y += (doorTarget - doorLeft.rotation.y) * (1 - Math.exp(-7 * dt));
+    doorRight.rotation.y += (-doorTarget - doorRight.rotation.y) * (1 - Math.exp(-7 * dt));
     // Advance clock hands subtly
     clockMinuteHand.rotation.z = -elapsed * 0.02;
 
@@ -898,6 +923,7 @@ export function buildAoyamaCourtyard(
     clockMinuteHand,
     clockHourHand,
     updateAtmosphere,
+    openEntranceDoor,
     applyLightingPreset,
   };
 }

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import {
   createInitialCharacterState,
+  COURTYARD_COLLIDERS,
   createInitialCameraState,
   stepCharacterKinematics,
   stepCameraRig,
@@ -20,6 +21,7 @@ import { createAcademyTextureLibrary } from './game/textures';
 import { buildAnimeStudentCharacter, updateCharacterAnimation } from './game/characterModel';
 import { buildAoyamaCourtyard, CourtyardEnvironment } from './game/courtyardScene';
 import { soundEngine } from './game/sound';
+import { STORY_MISSIONS, applyMissionEvent, createMissionProgress } from './game/missions';
 import { TitleScreen } from './components/TitleScreen';
 import { CourtyardHud } from './components/CourtyardHud';
 import { StatusAndUnityModal } from './components/StatusAndUnityModal';
@@ -48,6 +50,10 @@ export default function App() {
   const [hudZone, setHudZone] = useState('Sakura Stone Promenade');
   const [hudGait, setHudGait] = useState<GaitState>('idle');
   const [hudCoords, setHudCoords] = useState<{ x: number; z: number }>({ x: 0, z: 22 });
+  const [missionProgress, setMissionProgress] = useState(() => createMissionProgress(STORY_MISSIONS[0]));
+  const [nearEntranceDoor, setNearEntranceDoor] = useState(false);
+  const [entranceDoorOpen, setEntranceDoorOpen] = useState(false);
+  const entranceDoorOpenRef = useRef(false);
   const lastHudValuesRef = useRef<{ zone: string; gait: GaitState; rx: number; rz: number }>({
     zone: 'Sakura Stone Promenade',
     gait: 'idle',
@@ -93,6 +99,7 @@ export default function App() {
     document.body.dataset.state = 'playing';
     shellStateRef.current = 'playing';
     setShellState('playing');
+    soundEngine.startBackgroundMusic();
     soundEngine.playUiSwitch();
   }, []);
 
@@ -284,6 +291,7 @@ export default function App() {
     let lastPointerY = 0;
 
     const onPointerDown = (e: PointerEvent) => {
+      soundEngine.startBackgroundMusic();
       if (lookPointerId !== null) return;
       lookPointerId = e.pointerId;
       lastPointerX = e.clientX;
@@ -393,6 +401,7 @@ export default function App() {
           soundEngine.playJump();
         }
 
+        const wasGrounded = charStateRef.current.grounded;
         charStateRef.current = stepCharacterKinematics(
           charStateRef.current,
           {
@@ -403,8 +412,13 @@ export default function App() {
             jumpHeld,
             cameraYaw: camStateRef.current.yaw,
           },
-          rawDt
+          rawDt,
+          entranceDoorOpenRef.current
+            ? COURTYARD_COLLIDERS.filter((collider) => collider.label !== 'Academy Entrance Door')
+            : COURTYARD_COLLIDERS
         );
+
+        if (!wasGrounded && charStateRef.current.grounded) soundEngine.playLand();
 
         camStateRef.current = stepCameraRig(
           camStateRef.current,
@@ -462,12 +476,18 @@ export default function App() {
           lastHudSync = now;
           const c = charStateRef.current;
           const nextZone = getCurrentZoneName(c.x, c.z);
+          setNearEntranceDoor(Math.abs(c.x) < 2.1 && Math.abs(c.z + 18.2) < 2.4);
           const rx = Math.round(c.x);
           const rz = Math.round(c.z);
           const prev = lastHudValuesRef.current;
           if (nextZone !== prev.zone) {
             prev.zone = nextZone;
             setHudZone(nextZone);
+            const missionEvent = nextZone === 'Central Stone Lantern Plaza' ? 'enter_zone' : 'reach';
+            setMissionProgress((current) => applyMissionEvent(STORY_MISSIONS[0], current, {
+              type: missionEvent,
+              target: nextZone,
+            }));
           }
           if (c.gait !== prev.gait) {
             prev.gait = c.gait;
@@ -547,6 +567,14 @@ export default function App() {
 
       if (e.code === 'KeyM') {
         handleToggleMute();
+        return;
+      }
+
+      if (e.code === 'KeyE' && nearEntranceDoor && !statusModalOpenRef.current) {
+        courtyardEnvRef.current?.openEntranceDoor();
+        entranceDoorOpenRef.current = !entranceDoorOpenRef.current;
+        setEntranceDoorOpen(entranceDoorOpenRef.current);
+        soundEngine.playDoor();
         return;
       }
 
@@ -653,6 +681,8 @@ export default function App() {
       {shellState === 'playing' && (
         <CourtyardHud
           zoneName={hudZone}
+          mission={STORY_MISSIONS[0]}
+          missionProgress={missionProgress}
           gait={hudGait}
           coords={hudCoords}
           cameraMode={cameraMode}
@@ -666,13 +696,23 @@ export default function App() {
           onToggleMute={handleToggleMute}
           onTogglePause={() => setShellState('paused')}
           onOpenStatusReport={() => setStatusModalOpen(true)}
+          canInteractDoor={nearEntranceDoor}
+          entranceDoorOpen={entranceDoorOpen}
+          onInteractDoor={() => {
+            courtyardEnvRef.current?.openEntranceDoor();
+            entranceDoorOpenRef.current = !entranceDoorOpenRef.current;
+            setEntranceDoorOpen(entranceDoorOpenRef.current);
+            soundEngine.playDoor();
+          }}
           onTouchMoveInput={(dx, dz) => {
+            soundEngine.startBackgroundMusic();
             touchMoveRef.current = { x: dx, z: dz };
           }}
           onTouchSprintChange={(active) => {
             touchSprintRef.current = active;
           }}
           onTouchJump={() => {
+            soundEngine.startBackgroundMusic();
             jumpJustPressedRef.current = true;
           }}
         />
